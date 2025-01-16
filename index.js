@@ -30,18 +30,6 @@ const client = new Client({
 
 const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
 
-// Scheduled message channel IDs
-const SCHEDULED_MESSAGE_CLIMBING_CHANNEL_ID = process.env.SCHEDULED_MESSAGE_CLIMBING_CHANNEL_ID;
-const SCHEDULED_MESSAGE_BOARDGAME_CHANNEL_ID = process.env.SCHEDULED_MESSAGE_BOARDGAME_CHANNEL_ID;
-const SCHEDULED_MESSAGE_SWEDISH_CHANNEL_ID = process.env.SCHEDULED_MESSAGE_SWEDISH_CHANNEL_ID;
-const SCHEDULED_MESSAGE_CRAFTS_CHANNEL_ID = process.env.SCHEDULED_MESSAGE_CRAFTS_CHANNEL_ID;
-
-// Response channel IDs
-const RESPONSE_CHANNEL_CLIMBING_ID = process.env.RESPONSE_CHANNEL_CLIMBING_ID;
-const RESPONSE_CHANNEL_BOARDGAME_ID = process.env.RESPONSE_CHANNEL_BOARDGAME_ID;
-const RESPONSE_CHANNEL_SWEDISH_ID = process.env.RESPONSE_CHANNEL_SWEDISH_ID;
-const RESPONSE_CHANNEL_CRAFTS_ID = process.env.RESPONSE_CHANNEL_CRAFTS_ID;
-
 function sanitizeChannelName(channelName) {
   return channelName.replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
 }
@@ -49,242 +37,106 @@ function sanitizeChannelName(channelName) {
 // Set to keep track of messages that have already triggered an automatic response
 const respondedMessages = new Set();
 
+const scheduledMessages = JSON.parse(fs.readFileSync('./assets/scheduledMessages.json', 'utf8'));
+
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
+    // Iterate through scheduled messages and set up cron jobs if "turnon" is true
+    scheduledMessages.scheduledMessages.forEach((messageData) => {
+        if (!messageData.turnon) {
+            console.log(`Skipping disabled task: ${messageData.name}`);
+            return;
+        }
 
-  // Schedule the message to be sent in CLIMBING every Sunday at 17:30 Stockholm time
-  cron.schedule('30 41 2 * * 2', async () => {
-    try {
-      const channelId = SCHEDULED_MESSAGE_CLIMBING_CHANNEL_ID;
-      const channel = await client.channels.fetch(channelId);
-      if (!channel || !channel.isTextBased()) {
-        console.error('Channel not found or is not a text channel.');
-        return;
-      }
-      const messageContent = `Sup all <@&1263260259087028324>,
+        // Construct cron schedule string based on hour, minutes, seconds, and dayoftheweek
+        const cronSchedule = `${messageData.seconds} ${messageData.minutes} ${messageData.hour} * * ${messageData.dayoftheweek}`;
 
-**Friendly reminder:** Need to make a post on social media!
+        cron.schedule(
+            cronSchedule,
+            async () => {
+                try {
+                    const channel = await client.channels.fetch(messageData.channelId);
+                    if (!channel || !channel.isTextBased()) {
+                        console.error(`Channel not found or not text-based for ${messageData.name}`);
+                        return;
+                    }
 
-React to this message  
-❤️ - Automatically send a message in Discord
-
-*Not necessary to react; you can send message manually.*`;
-
-      const sentMessage = await channel.send(messageContent);
-      await sentMessage.react('❤️');
-      console.log(`Scheduled message sent to ${channel.name} at ${new Date().toLocaleString()}`);
-    } catch (error) {
-      console.error('Error sending scheduled message:', error);
-    }
-  }, {
-    timezone: 'Europe/Stockholm'
-  });
-
-  // Schedule the message to be sent in BOARDGAME every Monday at 17:30
-  cron.schedule('0 30 17 * * 1', async () => {
-    try {
-      const channelId = SCHEDULED_MESSAGE_BOARDGAME_CHANNEL_ID;
-      const channel = await client.channels.fetch(channelId);
-      if (!channel || !channel.isTextBased()) {
-        console.error('Channel not found or is not a text channel.');
-        return;
-      }
-      const messageContent = `Sup all <@&1263260051158732952>,
-
-**Friendly reminder:** Need to make a post on social media!
-
-React to this message  
-❤️ - Automatically send a message via Discord bot
-
-*Not necessary to react; you can send message manually.*`;
-
-      const sentMessage = await channel.send(messageContent);
-      await sentMessage.react('❤️');
-      console.log(`Scheduled message sent to ${channel.name} at ${new Date().toLocaleString()}`);
-    } catch (error) {
-      console.error('Error sending scheduled message:', error);
-    }
-  }, {
-    timezone: 'Europe/Stockholm'
-  });
-
-  // Schedule the message to be sent in SWEDISH every Wednesday at 20:00
-  cron.schedule('0 00 20 * * 3', async () => {
-    try {
-      const channelId = SCHEDULED_MESSAGE_SWEDISH_CHANNEL_ID;
-      const channel = await client.channels.fetch(channelId);
-      if (!channel || !channel.isTextBased()) {
-        console.error('Channel not found or is not a text channel.');
-        return;
-      }
-      const messageContent = `Sup all <@&1290657070953136128>,
-
-**Friendly reminder:** Need to make a post on social media!
-
-React to this message  
-❤️ - Automatically send a message in Discord
-
-*Not necessary to react; you can send message manually.*`;
-
-      const sentMessage = await channel.send(messageContent);
-      await sentMessage.react('❤️');
-      console.log(`Scheduled message sent to ${channel.name} at ${new Date().toLocaleString()}`);
-    } catch (error) {
-      console.error('Error sending scheduled message:', error);
-    }
-  }, {
-    timezone: 'Europe/Stockholm'
-  });
-
-  // Schedule the message to be sent in CRAFTS every
-  cron.schedule('0 30 17 * * 4', async () => {
-    try {
-      const channelId = SCHEDULED_MESSAGE_CRAFTS_CHANNEL_ID;
-      const channel = await client.channels.fetch(channelId);
-      if (!channel || !channel.isTextBased()) {
-        console.error('Channel not found or is not a text channel.');
-        return;
-      }
-      const messageContent = `Sup all <@&1263260321200607285>,
-
-**Friendly reminder:** Need to make a post on social media!
-
-React to this message  
-❤️ - Automatically send a message in Discord
-
-*Not necessary to react; you can send message manually.*`;
-
-      const sentMessage = await channel.send(messageContent);
-      await sentMessage.react('❤️');
-      console.log(`Scheduled message sent to ${channel.name} at ${new Date().toLocaleString()}`);
-    } catch (error) {
-      console.error('Error sending scheduled message:', error);
-    }
-  }, {
-    timezone: 'Europe/Stockholm'
-  });
+                    const sentMessage = await channel.send(messageData.messageContent);
+                    await sentMessage.react('❤️');
+                    console.log(`Scheduled message sent to ${channel.name} at ${new Date().toLocaleString()}`);
+                } catch (error) {
+                    console.error(`Error sending scheduled message for ${messageData.name}:`, error);
+                }
+            },
+            { timezone: messageData.timezone }
+        );
+    });
 });
 
 // Event listener for reactions
 client.on('messageReactionAdd', async (reaction, user) => {
-  if (user.bot) return;
+    if (user.bot) return;
 
-  // Fetch partials if needed
-  if (reaction.partial) {
-    try {
-      await reaction.fetch();
-    } catch (error) {
-      console.error('Failed to fetch reaction:', error);
-      return;
-    }
-  }
-
-  if (reaction.message.partial) {
-    try {
-      await reaction.message.fetch();
-    } catch (error) {
-      console.error('Failed to fetch message:', error);
-      return;
-    }
-  }
-
-  // Check if the message was sent by the bot
-  if (reaction.message.author.id !== client.user.id) return;
-
-  // Check if the reaction is a heart emoji
-  if (reaction.emoji.name === '❤️') {
-
-    // Check if the bot has already responded to this message
-    if (respondedMessages.has(reaction.message.id)) return;
-
-    const scheduledChannelId = reaction.message.channel.id;
-
-    let responseChannelId = null;
-    let automaticMessage = '';
-
-    if (scheduledChannelId === SCHEDULED_MESSAGE_CLIMBING_CHANNEL_ID) {
-      responseChannelId = RESPONSE_CHANNEL_CLIMBING_ID;
-      const nextMonday = (() => {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const daysUntilNextMonday = (8 - dayOfWeek) % 7 || 7;
-        const nextMondayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysUntilNextMonday);
-        return nextMondayDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'numeric' });
-      })();
-
-      automaticMessage = `Hi <@&1150784194973274242>,
-Join us, every Monday, for our climbing event! If you arrive earlier or late, please go to the counter, and the staff will guide you to the waiting area.
-
-**Event Details:**
-
-**Date:** ${nextMonday}
-**Time:** 17:30
-**Location:** Idrottshuset (Address: Bollgatan 1)
-
-Big thanks to Idrottshuset for their partnership! We're excited to offer a 50% discount on entry fees.
-
-We'll provide all the gear, so just bring yourself! 😊 Whether you're new or experienced in climbing!
-
-Grab a towel if you would like enjoy Idrottshuset sauna!`;
-    } else if (scheduledChannelId === SCHEDULED_MESSAGE_BOARDGAME_CHANNEL_ID) {
-      responseChannelId = RESPONSE_CHANNEL_BOARDGAME_ID;
-      automaticMessage = `<@&1150783727035756654>
-Board Game Night
-
-Board Game Night is happening every Tuesday at 18:00! Come and enjoy a fun evening; entry is free as always! We’ll be meeting in Building F.
-
-We have an exciting selection of games, sponsored by the Nexus Game Store in town and Sensus.
-
-Feel free to bring your own games to share with others!
-
-Whether you’re a beginner or a veteran gamer, everyone is welcome. We look forward to seeing you there!`;
-    } else if (scheduledChannelId === SCHEDULED_MESSAGE_SWEDISH_CHANNEL_ID) {
-      responseChannelId = RESPONSE_CHANNEL_SWEDISH_ID;
-      automaticMessage = `YOU NEED TO SEND ME A TEXT TO PUT HERE! DELETE THIS MESSAGE NOW, NOOOOOOOW, hahahaha`;
-    } else if (scheduledChannelId === SCHEDULED_MESSAGE_CRAFTS_CHANNEL_ID) {
-      responseChannelId = RESPONSE_CHANNEL_CRAFTS_ID;
-      automaticMessage = `<@&1150784132511711262>
-**Datum/Date:** Friday/Fredag
-**Tid/Time:** 18-22, drop in
-**Plats/Location:** B hus/ building, rum/room B1009
-**Pris/Cost:** Gratis/Free
-
-**Tonight is craft night again!**
-If you have your own projects you are working on, please bring them along.
-If you are interested in trying something new, Sensus has contributed craft materials such as beads, materials for crocheting and cross-stitching as well as watercolor paints.
-Not sure what to do?
-If so, we will be happy to help you get started, we explain this in English.
-**Everyone from beginners to craft professionals is welcome!**
-
-If you can only spare 15 minutes or an hour, it doesn't matter, we look forward to seeing you here!
-
-
-**Inatt är det craft night igen!**
-Har ni egna projekt ni arbetar på får ni gärna ta med dem.
-Är ni intresserade av att testa något nytt så har Sensus bidragit med pysselmaterial som pärlor, material till virkning och korsstygn samt akvarellfärger.
-Är du inte säker på hur du ska göra?
-Isåfall hjälper vi gärna dig komma igång, vi förklarar detta på Engelska.
-**Alla från nybörjare till pysselproffs är välkomna!**
-
-Kan ni bara 15 minuter eller en timme spelar det ingen roll, vi ser fram emot att se er här!`;
-    } else {
-      automaticMessage = '❤️';
-    }
-
-    if (responseChannelId) {
-      try {
-        const responseChannel = await client.channels.fetch(responseChannelId);
-        if (!responseChannel || !responseChannel.isTextBased()) {
-          console.error('Response channel not found or is not a text channel.');
-          return;
+    if (reaction.partial) {
+        try {
+            await reaction.fetch();
+        } catch (error) {
+            console.error('Failed to fetch reaction:', error);
+            return;
         }
-        await responseChannel.send(automaticMessage);
-        console.log(`Automatic message sent to ${responseChannel.name} in response to reaction in ${reaction.message.channel.name}`);
-      } catch (error) {
-        console.error('Error sending automatic message:', error);
-      }
-    } 
-  }
+    }
+
+    if (reaction.message.partial) {
+        try {
+            await reaction.message.fetch();
+        } catch (error) {
+            console.error('Failed to fetch message:', error);
+            return;
+        }
+    }
+
+    // Ensure the reaction is for the bot's message
+    if (reaction.message.author.id !== client.user.id) return;
+
+    // Check if the emoji is ❤️
+    if (reaction.emoji.name === '❤️') {
+        // Prevent duplicate responses
+        if (respondedMessages.has(reaction.message.id)) {
+            console.log(`Already responded to message ID: ${reaction.message.id}`);
+            return;
+        }
+
+        respondedMessages.add(reaction.message.id);
+
+        const messageData = scheduledMessages.scheduledMessages.find(
+            (msg) => msg.channelId === reaction.message.channel.id
+        );
+
+        if (messageData && messageData.turnon) {
+            // Ensure there are automatic responses available
+            if (messageData.automaticResponses && messageData.automaticResponses.length > 0) {
+                // Pick a random automatic response
+                const randomResponse =
+                    messageData.automaticResponses[Math.floor(Math.random() * messageData.automaticResponses.length)];
+
+                try {
+                    const responseChannel = await client.channels.fetch(messageData.responseChannelId);
+                    if (!responseChannel || !responseChannel.isTextBased()) {
+                        console.error(`Response channel not found or not text-based for ${messageData.name}`);
+                        return;
+                    }
+
+                    await responseChannel.send(randomResponse.content);
+                    console.log(
+                        `Sent automatic response: "${randomResponse.title}" to ${responseChannel.name} in response to reaction.`
+                    );
+                } catch (error) {
+                    console.error(`Error sending automatic response for ${messageData.name}:`, error);
+                }
+            } else {
+                console.error(`No automatic responses defined for ${messageData.name}.`);
+            }
+        }
+    }
 });
 
 client.on('guildMemberAdd', async (member) => {
