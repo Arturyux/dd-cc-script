@@ -34,18 +34,17 @@ function sanitizeChannelName(channelName) {
   return channelName.replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
 }
 
-const defaultScheduledMessages = {
-  "scheduledMessages": [
+const defaultScheduledMessages = [
     {
       "name": "example",
       "turnon": true,
       "channelId": "example",
       "responseChannelId": "example",
       "roleId": "example",
-      "hour": "13",
-      "minutes": "15",
+      "hour": "00",
+      "minutes": "42",
       "seconds": "0",
-      "dayoftheweek": "4",
+      "dayoftheweek": "2",
       "timezone": "Europe/Stockholm",
       "messageContent": "example",
       "automaticResponses": [
@@ -59,8 +58,7 @@ const defaultScheduledMessages = {
         }
       ]
     }
-  ]
-};
+  ];
 
 // Check if the `scheduledMessages.json` file exists
 const filePath = './assets/scheduledMessages.json';
@@ -76,7 +74,7 @@ const scheduledMessages = JSON.parse(fs.readFileSync('./assets/scheduledMessages
 
 client.once('ready', () => {
     // Iterate through scheduled messages and set up cron jobs if "turnon" is true
-    scheduledMessages.scheduledMessages.forEach((messageData) => {
+    scheduledMessages.forEach((messageData) => {
         if (!messageData.turnon) {
             console.log(`Skipping disabled task: ${messageData.name}`);
             return;
@@ -142,7 +140,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
         respondedMessages.add(reaction.message.id);
 
-        const messageData = scheduledMessages.scheduledMessages.find(
+        const messageData = scheduledMessages.find(
             (msg) => msg.channelId === reaction.message.channel.id
         );
 
