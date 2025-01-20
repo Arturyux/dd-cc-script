@@ -34,6 +34,41 @@ function sanitizeChannelName(channelName) {
   return channelName.replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
 }
 
+const defaultScheduledMessages = {
+  "scheduledMessages": [
+    {
+      "name": "example",
+      "turnon": true,
+      "channelId": "example",
+      "responseChannelId": "example",
+      "roleId": "example",
+      "hour": "13",
+      "minutes": "15",
+      "seconds": "0",
+      "dayoftheweek": "4",
+      "timezone": "Europe/Stockholm",
+      "messageContent": "example",
+      "automaticResponses": [
+        {
+          "title": "example",
+          "content": "example"
+        },
+        {
+          "title": "example",
+          "content": "example"
+        }
+      ]
+    }
+  ]
+};
+
+// Check if the `scheduledMessages.json` file exists
+const filePath = './assets/scheduledMessages.json';
+if (!fs.existsSync(filePath)) {
+  console.log('scheduledMessages.json not found. Creating a default file...');
+  fs.writeFileSync(filePath, JSON.stringify(defaultScheduledMessages, null, 2), 'utf8');
+  console.log('Default scheduledMessages.json file created.');
+}
 // Set to keep track of messages that have already triggered an automatic response
 const respondedMessages = new Set();
 
