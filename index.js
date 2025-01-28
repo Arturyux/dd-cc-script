@@ -48,27 +48,39 @@ const defaultScheduledMessages = [
     "type": "weekly",
     "name": "example-weekly-1",
     "turnon": true,
+    "imageturnon": true, // Global flag to enable images
     "channelId": "1329422830185742366",
     "responseChannelId": "1329422830185742366",
-    "roleId": "example",
+    "roleId": "example-role-id-1",
     "hour": "17",
     "minutes": "53",
     "seconds": "30",
-    "dayoftheweek": "3",
+    "dayoftheweek": "3", // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     "timezone": "Europe/Stockholm",
-    "messageContent": "example weekly message",
+    "messageContent": "This is an example weekly message with a random image.",
     "automaticResponses": [
       {
         "title": "example1",
-        "content": "response1"
+        "content": "Response 1"
       },
       {
         "title": "example2",
-        "content": "response2"
+        "content": "Response 2"
       },
       {
         "title": "example3",
-        "content": "response3"
+        "content": "Response 3"
+      }
+    ],
+    "Images": [
+      {
+        "Imgurl": "https://picsum.photos/200"
+      },
+      {
+        "Imgurl": "https://picsum.photos/200/300"
+      },
+      {
+        "Imgurl": "https://picsum.photos/200/300"
       }
     ]
   },
@@ -76,27 +88,35 @@ const defaultScheduledMessages = [
     "type": "weekly",
     "name": "example-weekly-2",
     "turnon": true,
-    "channelId": "1329422856819314708",
-    "responseChannelId": "1329422856819314708",
-    "roleId": "example",
-    "hour": "17",
-    "minutes": "52",
-    "seconds": "40",
-    "dayoftheweek": "3",
+    "imageturnon": false, // Images are disabled for this message
+    "channelId": "1329422830185742367",
+    "responseChannelId": "1329422830185742367",
+    "roleId": "example-role-id-2",
+    "hour": "12",
+    "minutes": "00",
+    "seconds": "00",
+    "dayoftheweek": "5", // Friday
     "timezone": "Europe/Stockholm",
-    "messageContent": "e1xample weekly message",
+    "messageContent": "Another example weekly message without images.",
     "automaticResponses": [
       {
-        "title": "example1",
-        "content": "1response1"
+        "title": "exampleA",
+        "content": "Response A"
       },
       {
-        "title": "example2",
-        "content": "1response2"
+        "title": "exampleB",
+        "content": "Response B"
+      }
+    ],
+    "Images": [
+      {
+        "Imgurl": "https://www.example.com/example4.png"
       },
       {
-        "title": "example3",
-        "content": "1response3"
+        "Imgurl": "https://www.example.com/example5.png"
+      },
+      {
+        "Imgurl": "https://www.example.com/example6.png"
       }
     ]
   },
@@ -104,33 +124,38 @@ const defaultScheduledMessages = [
     "type": "weekly",
     "name": "example-weekly-3",
     "turnon": true,
-    "channelId": "1329422856819314708",
-    "responseChannelId": "1329422856819314708",
-    "roleId": "example",
-    "hour": "17",
-    "minutes": "52",
-    "seconds": "50",
-    "dayoftheweek": "3",
+    "imageturnon": true,
+    "channelId": "1329422830185742368",
+    "responseChannelId": "1329422830185742368",
+    "roleId": "example-role-id-3",
+    "hour": "09",
+    "minutes": "30",
+    "seconds": "00",
+    "dayoftheweek": "1", // Monday
     "timezone": "Europe/Stockholm",
-    "messageContent": "e2xample weekly message",
+    "messageContent": "Good morning! Here's your weekly update with a random image.",
     "automaticResponses": [
       {
-        "title": "example1",
-        "content": "2response1"
+        "title": "exampleX",
+        "content": "Response X"
       },
       {
-        "title": "example2",
-        "content": "2response2"
+        "title": "exampleY",
+        "content": "Response Y"
+      }
+    ],
+    "Images": [
+      {
+        "Imgurl": "https://www.example.com/example7.png"
       },
       {
-        "title": "example3",
-        "content": "2response3"
+        "Imgurl": "https://www.example.com/example8.png"
       }
     ]
   }
 ];
 
-// Create file if it doesn't exist
+// Create the scheduledMessages.json file if it doesn't exist
 if (!fs.existsSync(scheduledMessagesFilePath)) {
   console.log('scheduledMessages.json not found. Creating a default file...');
   fs.writeFileSync(
@@ -173,7 +198,7 @@ async function sendScheduledMessage(msg) {
     // Send the message
     const sentMessage = await channel.send(finalMessageContent);
 
-    // Store the mapping here
+    // Store the mapping
     messageIdToScheduledConfig.set(sentMessage.id, msg);
 
     // React with ❤️
@@ -186,17 +211,17 @@ async function sendScheduledMessage(msg) {
 }
 
 /* =============================
-   scheduleAllMessages
-   - type: "weekly" => Node-Cron
+   Function: Schedule All Messages
+   - type: "weekly" => node-cron
    - type: "date"   => setTimeout (+ daybefore)
 ============================= */
 function scheduleAllMessages(messages) {
   // Stop existing tasks
   cronJobs.forEach(job => {
     if (job.stop) {
-      job.stop(); // cron job
+      job.stop(); // Stop cron job
     } else if (job.timeoutId) {
-      clearTimeout(job.timeoutId);
+      clearTimeout(job.timeoutId); // Clear timeout
     }
   });
   cronJobs = [];
@@ -217,7 +242,7 @@ function scheduleAllMessages(messages) {
           { timezone: msg.timezone || 'Europe/Stockholm' }
         );
         cronJobs.push(job);
-        console.log(`[WEEKLY] Scheduled: ${msg.name} => ${cronStr} (TZ: ${msg.timezone})`);
+        console.log(`[WEEKLY] Scheduled: ${msg.name} => "${cronStr}" (TZ: ${msg.timezone})`);
       } else {
         console.warn(`[WEEKLY] Missing fields for ${msg.name}, skipping.`);
       }
@@ -228,23 +253,23 @@ function scheduleAllMessages(messages) {
         console.warn(`[DATE] Missing fields for ${msg.name}, skipping.`);
         return;
       }
-      // parse time "HH:MM:SS"
+      // Parse time "HH:MM:SS"
       const [HH, MM, SS] = time.split(':').map(Number);
       const dateObj = new Date(
         Number(year),
-        Number(month) - 1, // zero-based
+        Number(month) - 1, // Months are zero-based in JS Date
         Number(day),
         HH || 0,
         MM || 0,
         SS || 0
       );
 
-      function scheduleOneTimeMessage(targetDate, label='') {
+      function scheduleOneTimeMessage(targetDate, label = '') {
         const now = new Date();
         if (targetDate > now) {
           const diffMs = targetDate - now;
-          const timeoutId = setTimeout(() => {
-            sendScheduledMessage(msg);
+          const timeoutId = setTimeout(async () => {
+            await sendScheduledMessage(msg);
             console.log(`[ONE-TIME] Fired: ${msg.name} ${label} at ${new Date().toLocaleString()}`);
           }, diffMs);
 
@@ -258,7 +283,7 @@ function scheduleAllMessages(messages) {
       // Schedule main date
       scheduleOneTimeMessage(dateObj);
 
-      // If daybefore > 0, schedule that many days earlier
+      // If daybefore > 0, schedule reminders
       const daysBefore = parseInt(daybefore, 10);
       if (daysBefore > 0) {
         const remindDate = new Date(dateObj.getTime() - daysBefore * 24 * 60 * 60 * 1000);
@@ -271,6 +296,7 @@ function scheduleAllMessages(messages) {
   });
 }
 
+// Watch the scheduledMessages.json file for changes and reload if modified
 fs.watchFile(scheduledMessagesFilePath, (curr, prev) => {
   if (curr.mtime > prev.mtime) {
     console.log('scheduledMessages.json changed on disk. Reloading...');
@@ -286,7 +312,7 @@ fs.watchFile(scheduledMessagesFilePath, (curr, prev) => {
 });
 
 /* =============================
-   Discord 'ready' event
+   Discord 'ready' Event Handler
 ============================= */
 client.once('ready', () => {
   scheduleAllMessages(scheduledMessages);
@@ -299,7 +325,7 @@ client.once('ready', () => {
 const respondedMessages = new Set(); // To track already responded messages
 
 client.on('messageReactionAdd', async (reaction, user) => {
-  if (user.bot) return;
+  if (user.bot) return; // Ignore bot reactions
 
   // Handle partials
   if (reaction.partial) {
@@ -319,7 +345,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
     }
   }
 
-  // Must be the bot's own message
+  // Ensure the reaction is on a message sent by the bot
   if (reaction.message.author.id !== client.user.id) return;
 
   if (reaction.emoji.name === '❤️') {
@@ -330,28 +356,39 @@ client.on('messageReactionAdd', async (reaction, user) => {
     }
     respondedMessages.add(reaction.message.id);
 
-    // Use the Map to get the correct config
+    // Retrieve the scheduled config for this message
     const msgCfg = messageIdToScheduledConfig.get(reaction.message.id);
     if (!msgCfg) {
       console.log(`No stored config for message ID: ${reaction.message.id}`);
       return;
     }
 
+    // Ensure automatic responses are enabled
     if (msgCfg.turnon) {
       if (Array.isArray(msgCfg.automaticResponses) && msgCfg.automaticResponses.length > 0) {
-        // Pick a random response from THIS message's set
+        // Select a random automatic response
         const randomRespIndex = Math.floor(Math.random() * msgCfg.automaticResponses.length);
         const randomResp = msgCfg.automaticResponses[randomRespIndex];
+        let responseContent = randomResp.content;
+
+        // If images are enabled, append a random image URL
+        if (msgCfg.imageturnon && Array.isArray(msgCfg.Images) && msgCfg.Images.length > 0) {
+          const randomImgIndex = Math.floor(Math.random() * msgCfg.Images.length);
+          const randomImg = msgCfg.Images[randomImgIndex];
+          responseContent += `\n${randomImg.Imgurl}`;
+        }
 
         try {
-          // Send the response in the specified response channel
+          // Fetch the response channel
           const responseChannel = await client.channels.fetch(msgCfg.responseChannelId);
           if (!responseChannel || !responseChannel.isTextBased()) {
             console.error(`Response channel invalid for ${msgCfg.name}`);
             return;
           }
-          await responseChannel.send(randomResp.content);
-          console.log(`Sent auto-response: "${randomResp.title}" to #${responseChannel.name}.`);
+
+          // Send the automatic response
+          await responseChannel.send(responseContent);
+          console.log(`Sent auto-response for "${msgCfg.name}" to #${responseChannel.name}.`);
         } catch (error) {
           console.error(`Error sending auto-response for ${msgCfg.name}:`, error);
         }
