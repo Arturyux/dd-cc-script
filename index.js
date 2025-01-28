@@ -74,13 +74,13 @@ const defaultScheduledMessages = [
     ],
     "Images": [
       {
-        "Imgurl": "https://picsum.photos/200"
+        "Imgurl": "https://www.example.com/example1.png"
       },
       {
-        "Imgurl": "https://picsum.photos/200/300"
+        "Imgurl": "https://www.example.com/example2.png"
       },
       {
-        "Imgurl": "https://picsum.photos/200/300"
+        "Imgurl": "https://www.example.com/example3.png"
       }
     ]
   },
@@ -195,8 +195,13 @@ async function sendScheduledMessage(msg) {
 
     let finalMessageContent = msg.messageContent;
 
-    // Send the message
-    const sentMessage = await channel.send(finalMessageContent);
+    // Send the message with or without attachments
+    let sentMessage;
+    if (finalMessageContent.length > 0) {
+      sentMessage = await channel.send(finalMessageContent);
+    } else {
+      sentMessage = await channel.send("No message exist, please just report this to Arthur ahahaha, look line 200");
+    }
 
     // Store the mapping
     messageIdToScheduledConfig.set(sentMessage.id, msg);
@@ -370,12 +375,15 @@ client.on('messageReactionAdd', async (reaction, user) => {
         const randomRespIndex = Math.floor(Math.random() * msgCfg.automaticResponses.length);
         const randomResp = msgCfg.automaticResponses[randomRespIndex];
         let responseContent = randomResp.content;
+        let files = [];
 
-        // If images are enabled, append a random image URL
+        // If images are enabled, select a random image and attach it
         if (msgCfg.imageturnon && Array.isArray(msgCfg.Images) && msgCfg.Images.length > 0) {
           const randomImgIndex = Math.floor(Math.random() * msgCfg.Images.length);
           const randomImg = msgCfg.Images[randomImgIndex];
-          responseContent += `\n${randomImg.Imgurl}`;
+
+          // Add the image URL to the files array
+          files.push(randomImg.Imgurl);
         }
 
         try {
@@ -386,8 +394,13 @@ client.on('messageReactionAdd', async (reaction, user) => {
             return;
           }
 
-          // Send the automatic response
-          await responseChannel.send(responseContent);
+          // Send the automatic response with or without attachments
+          if (files.length > 0) {
+            await responseChannel.send({ content: responseContent, files: files });
+          } else {
+            await responseChannel.send(responseContent);
+          }
+
           console.log(`Sent auto-response for "${msgCfg.name}" to #${responseChannel.name}.`);
         } catch (error) {
           console.error(`Error sending auto-response for ${msgCfg.name}:`, error);
