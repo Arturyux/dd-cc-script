@@ -12,7 +12,8 @@ import {
   GatewayIntentBits,
   Partials,
   PermissionsBitField,
-  EmbedBuilder
+  EmbedBuilder,
+  ChannelType
 } from 'discord.js';
 
 /* =============================
@@ -494,6 +495,78 @@ client.on('messageCreate', async (message) => {
     await handleListChannelsCommand(message);
     return;
   }
+});
+
+client.once('ready', async () => {
+  console.log(`Logged in as ${client.user.tag}`);
+
+  // ------------------------------
+  // Fetch Text Channels from all Guilds
+  // ------------------------------
+  const channels = [];
+
+  // Iterate over each guild the bot is in
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      // Fetch all channels for this guild (ensuring they are loaded)
+      const fetchedChannels = await guild.channels.fetch();
+
+      // Only add text channels (GuildText)
+      fetchedChannels.forEach(channel => {
+        if (channel.type === ChannelType.GuildText) {
+          channels.push({
+            id: channel.id,
+            name: channel.name
+          });
+        }
+      });
+    } catch (error) {
+      console.error(`Error fetching channels for guild ${guild.id}:`, error);
+    }
+  }
+
+  // Write the channels data to channels.json
+  const channelsFilePath = path.join(process.cwd(), 'assets/channels.json');
+  fs.writeFile(channelsFilePath, JSON.stringify({ channels }, null, 4), err => {
+    if (err) {
+      console.error('Error writing channels file:', err);
+    } else {
+      console.log('Channel information has been saved to channels.json');
+    }
+  });
+
+  // ------------------------------
+  // Fetch Roles from all Guilds
+  // ------------------------------
+  const roles = [];
+
+  // Iterate over each guild the bot is in
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      // Fetch all roles for this guild
+      const fetchedRoles = await guild.roles.fetch();
+
+      // Iterate through the roles collection and add each role's id and name
+      fetchedRoles.forEach(role => {
+        roles.push({
+          id: role.id,
+          name: role.name
+        });
+      });
+    } catch (error) {
+      console.error(`Error fetching roles for guild ${guild.id}:`, error);
+    }
+  }
+
+  // Write the roles data to roles.json
+  const rolesFilePath = path.join(process.cwd(), 'assets/roles.json');
+  fs.writeFile(rolesFilePath, JSON.stringify({ roles }, null, 4), err => {
+    if (err) {
+      console.error('Error writing roles file:', err);
+    } else {
+      console.log('Role information has been saved to roles.json');
+    }
+  });
 });
 
 /* =============================
@@ -1035,10 +1108,38 @@ app.delete('/scheduledMessages/:index', (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to delete scheduled message' });
   }
 });
+// HTTP GET endpoint to serve channels.json data
+app.get('/channels', (req, res) => {
+  const channelsPath = path.join(process.cwd(), 'assets/channels.json');
+  fs.readFile(channelsPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading channels.json:', err);
+      return res.status(500).json({ error: 'Failed to load channels data' });
+    }
+    try {
+      res.json(JSON.parse(data));
+    } catch (parseError) {
+      console.error('Error parsing channels.json:', parseError);
+      res.status(500).json({ error: 'Invalid JSON data' });
+    }
+  });
+});
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// HTTP GET endpoint to serve roles.json data
+app.get('/roles', (req, res) => {
+  const rolesPath = path.join(process.cwd(), 'assets/roles.json');
+  fs.readFile(rolesPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading roles.json:', err);
+      return res.status(500).json({ error: 'Failed to load roles data' });
+    }
+    try {
+      res.json(JSON.parse(data));
+    } catch (parseError) {
+      console.error('Error parsing roles.json:', parseError);
+      res.status(500).json({ error: 'Invalid JSON data' });
+    }
+  });
 });
 
 // Finally, login the Discord bot
